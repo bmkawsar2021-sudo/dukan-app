@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(export NODE_OPTIONS=\"--max-old-space-size=4096\")",
+      "Bash(npm run:*)",
+      "Bash(vercel --prod --yes)"
+    ]
+  }
+}
