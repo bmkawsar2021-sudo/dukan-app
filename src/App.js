@@ -1,5 +1,5 @@
 import React, { useState, useEffect, Component } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
 import { ToastProvider } from './context/ToastContext';
 import { ShopProvider } from './context/ShopContext';
 import useDarkMode from './hooks/useDarkMode';
@@ -13,6 +13,7 @@ import Customers from './pages/Customers';
 import DueTracker from './pages/DueTracker';
 import EventAccounts from './pages/EventAccounts';
 import Settings from './pages/Settings';
+import { ShieldAlert, ArrowRight } from './components/icons';
 import './styles/theme.css';
 
 class ErrorBoundary extends Component {
@@ -37,28 +38,53 @@ class ErrorBoundary extends Component {
 
 function BackupBanner() {
   const [show, setShow] = useState(false);
+  const [daysSince, setDaysSince] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const last = localStorage.getItem('lastBackupDate');
     if (!last) {
       setShow(true);
+      setDaysSince(null);
     } else {
-      const daysSince = (Date.now() - new Date(last).getTime()) / (1000 * 60 * 60 * 24);
-      if (daysSince > 7) setShow(true);
+      const d = (Date.now() - new Date(last).getTime()) / (1000 * 60 * 60 * 24);
+      setDaysSince(Math.floor(d));
+      if (d > 7) setShow(true);
     }
   }, []);
 
   if (!show) return null;
 
+  const subText = daysSince === null
+    ? 'You haven’t backed up your shop data yet'
+    : `Your last backup was ${daysSince} day${daysSince === 1 ? '' : 's'} ago`;
+
   return (
-    <div style={{
-      background: '#fef3c7', border: '1px solid #f59e0b', color: '#92400e',
-      padding: '10px 16px', borderRadius: 8, marginBottom: 16,
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      fontSize: 13, fontWeight: 600,
-    }}>
-      <span>Backup recommended! Go to Settings to download backup.</span>
-      <button onClick={() => setShow(false)} style={{ background: 'none', border: 'none', color: '#92400e', cursor: 'pointer', fontSize: 18 }}>✕</button>
+    <div className="backup-banner">
+      <div className="backup-banner-icon">
+        <ShieldAlert size={18} />
+      </div>
+      <div className="backup-banner-body">
+        <p className="backup-banner-title">Time to back up your data</p>
+        <p className="backup-banner-sub">{subText}</p>
+      </div>
+      <button
+        className="backup-banner-cta"
+        onClick={() => navigate('/settings')}
+      >
+        Back up now
+        <ArrowRight size={12} />
+      </button>
+      <button
+        className="backup-banner-dismiss"
+        onClick={() => setShow(false)}
+        aria-label="Dismiss"
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+      </button>
     </div>
   );
 }

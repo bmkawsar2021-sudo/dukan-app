@@ -1,17 +1,30 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useShop } from '../context/ShopContext';
+import {
+  LayoutDashboard,
+  Receipt,
+  BookOpen,
+  Wallet,
+  Package,
+  Users,
+  HandCoins,
+  CalendarHeart,
+  Settings,
+  Sun,
+  Moon,
+} from './icons';
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: '🏠' },
-  { path: '/cash-memo', label: 'Cash Memo', icon: '🧾' },
-  { path: '/sales-ledger', label: 'Sales Ledger', icon: '📋' },
-  { path: '/expenses', label: 'Expenses', icon: '💰' },
-  { path: '/stock', label: 'Stock', icon: '📦' },
-  { path: '/customers', label: 'Customers', icon: '👥' },
-  { path: '/dues', label: 'Due Tracker', icon: '💸' },
-  { path: '/events', label: 'Events', icon: '🎉' },
-  { path: '/settings', label: 'Settings', icon: '⚙️' },
+  { path: '/', label: 'Dashboard', Icon: LayoutDashboard, end: true },
+  { path: '/cash-memo', label: 'Cash Memo', Icon: Receipt },
+  { path: '/sales-ledger', label: 'Sales Ledger', Icon: BookOpen },
+  { path: '/expenses', label: 'Expenses', Icon: Wallet },
+  { path: '/stock', label: 'Stock', Icon: Package },
+  { path: '/customers', label: 'Customers', Icon: Users },
+  { path: '/dues', label: 'Due Tracker', Icon: HandCoins },
+  { path: '/events', label: 'Events', Icon: CalendarHeart },
+  { path: '/settings', label: 'Settings', Icon: Settings },
 ];
 
 export default function Sidebar({ isOpen, onClose, dark, toggleDark }) {
@@ -19,8 +32,10 @@ export default function Sidebar({ isOpen, onClose, dark, toggleDark }) {
   const [showShopDropdown, setShowShopDropdown] = useState(false);
 
   const sidebarBg = dark
-    ? 'linear-gradient(180deg, #0f172a, #1e293b)'
-    : 'linear-gradient(180deg, #1e1b4b, #312e81)';
+    ? 'linear-gradient(180deg, #0A1023 0%, #131A33 100%)'
+    : 'linear-gradient(180deg, #1E1B4B 0%, #312E81 100%)';
+
+  const DarkToggleIcon = dark ? Sun : Moon;
 
   return (
     <>
@@ -34,26 +49,34 @@ export default function Sidebar({ isOpen, onClose, dark, toggleDark }) {
           transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
           transition: 'transform 0.3s ease',
           display: 'flex', flexDirection: 'column', overflowY: 'auto',
-          boxShadow: '4px 0 20px rgba(0,0,0,0.1)',
+          boxShadow: '4px 0 20px rgba(0,0,0,0.10)',
         }}
         className="sidebar-desktop"
       >
         {/* Header */}
-        <div style={{ padding: '20px 16px', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+        <div style={{ padding: '20px 16px', borderBottom: '1px solid rgba(255,255,255,0.10)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-            <div style={{ fontSize: 22, fontWeight: 800, letterSpacing: -0.5 }}>Dukan</div>
+            <div
+              style={{
+                fontFamily: "'Bricolage Grotesque', 'Inter', sans-serif",
+                fontSize: 22, fontWeight: 700, letterSpacing: -0.5,
+              }}
+            >
+              Dukan
+            </div>
             <button
               onClick={toggleDark}
+              aria-label={dark ? 'Switch to light mode' : 'Switch to dark mode'}
               style={{
-                background: 'rgba(255,255,255,0.1)', border: 'none', borderRadius: 10,
-                width: 38, height: 38, cursor: 'pointer', fontSize: 16,
+                background: 'rgba(255,255,255,0.10)', border: 'none', borderRadius: 10,
+                width: 36, height: 36, cursor: 'pointer',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white',
                 transition: 'background 0.2s',
               }}
-              onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.2)'}
-              onMouseLeave={e => e.target.style.background = 'rgba(255,255,255,0.1)'}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.20)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.10)'}
             >
-              {dark ? '☀️' : '🌙'}
+              <DarkToggleIcon size={18} />
             </button>
           </div>
 
@@ -71,8 +94,8 @@ export default function Sidebar({ isOpen, onClose, dark, toggleDark }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                 transition: 'background 0.2s',
               }}
-              onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.15)'}
-              onMouseLeave={e => e.target.style.background = 'rgba(255,255,255,0.08)'}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.08)'}
             >
               <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {currentShop?.name || 'Select Shop'}
@@ -91,7 +114,7 @@ export default function Sidebar({ isOpen, onClose, dark, toggleDark }) {
                     onClick={() => { switchShop(shop.id); setShowShopDropdown(false); }}
                     style={{
                       width: '100%', padding: '10px 12px', border: 'none', cursor: 'pointer',
-                      background: shop.id === currentShop?.id ? 'rgba(99,102,241,0.1)' : 'transparent',
+                      background: shop.id === currentShop?.id ? 'rgba(99,102,241,0.10)' : 'transparent',
                       color: shop.id === currentShop?.id ? '#6366f1' : 'var(--text)',
                       fontSize: 13, fontWeight: shop.id === currentShop?.id ? 700 : 400,
                       textAlign: 'left', display: 'block',
@@ -119,31 +142,31 @@ export default function Sidebar({ isOpen, onClose, dark, toggleDark }) {
 
         {/* Navigation */}
         <nav style={{ flex: 1, padding: '16px 10px' }}>
-          {navItems.map(item => (
+          {navItems.map(({ path, label, Icon, end }) => (
             <NavLink
-              key={item.path}
-              to={item.path}
-              end={item.path === '/'}
+              key={path}
+              to={path}
+              end={end}
               onClick={onClose}
               style={({ isActive }) => ({
                 display: 'flex', alignItems: 'center', gap: 14,
-                padding: '12px 14px', borderRadius: 12, textDecoration: 'none',
-                color: isActive ? 'white' : 'rgba(255,255,255,0.65)',
+                padding: '11px 14px', borderRadius: 12, textDecoration: 'none',
+                color: isActive ? 'white' : 'rgba(255,255,255,0.70)',
                 background: isActive ? 'linear-gradient(135deg, #6366f1, #8b5cf6)' : 'transparent',
-                fontSize: 14, fontWeight: isActive ? 600 : 400, marginBottom: 4,
+                fontSize: 14, fontWeight: isActive ? 600 : 500, marginBottom: 4,
                 transition: 'all 0.2s', cursor: 'pointer',
-                boxShadow: isActive ? '0 4px 12px rgba(99,102,241,0.3)' : 'none',
+                boxShadow: isActive ? '0 4px 12px rgba(99,102,241,0.30)' : 'none',
               })}
-              onMouseEnter={e => { if (!e.currentTarget.style.background.includes('gradient')) e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+              onMouseEnter={e => { if (!e.currentTarget.style.background.includes('gradient')) e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; }}
               onMouseLeave={e => { if (!e.currentTarget.style.background.includes('gradient')) e.currentTarget.style.background = 'transparent'; }}
             >
-              <span style={{ fontSize: 20 }}>{item.icon}</span>
-              <span>{item.label}</span>
+              <Icon size={20} />
+              <span>{label}</span>
             </NavLink>
           ))}
         </nav>
 
-        <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.1)', fontSize: 11, opacity: 0.4, textAlign: 'center' }}>
+        <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.10)', fontSize: 11, opacity: 0.4, textAlign: 'center' }}>
           Dukan v2.0
         </div>
       </aside>

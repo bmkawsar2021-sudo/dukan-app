@@ -103,15 +103,23 @@ export default function CashMemo() {
   };
 
   const handleDownloadPDF = async () => {
+    if (validItems.length === 0) {
+      toastError('Add at least one item before downloading the PDF');
+      return;
+    }
     setExporting(true);
     try {
       await exportInvoicePDF({
-        invoiceNumber, date, customerName, customerPhone,
+        invoiceNumber, date,
+        customerName: customerName.trim() || 'Walk-in Customer',
+        customerPhone,
         items: validItems, subtotal, discount: Number(discount) || 0, grandTotal,
+        paymentStatus,
+        shopName, shopAddress, shopPhone,
       });
     } catch (e) {
       console.error('PDF export error:', e);
-      toastError('PDF export failed');
+      toastError(e?.message || 'PDF export failed');
     }
     setExporting(false);
   };

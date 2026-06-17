@@ -1,50 +1,128 @@
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
+const escapeHtml = (s) => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+const formatMoney = (n) => `Tk. ${Number(n || 0).toFixed(2)}`;
+
+const buildInvoiceHtml = (invoice) => {
+  const items = (invoice.items || []).map((item) => `
+    <tr>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;">${escapeHtml(item.name)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:center;">${item.quantity}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;">${formatMoney(item.unitPrice)}</td>
+      <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;text-align:right;font-weight:600;">${formatMoney((item.quantity || 0) * (item.unitPrice || 0))}</td>
+    </tr>`).join('');
+
+  return `
+    <div style="width:794px;padding:40px;background:#ffffff;color:#111827;font-family:Inter,Arial,sans-serif;">
+      <div style="text-align:center;border-bottom:2px solid #6366f1;padding-bottom:16px;margin-bottom:24px;">
+        <h1 style="margin:0;font-size:26px;color:#111827;">${escapeHtml(invoice.shopName || 'Amar Dukan')}</h1>
+        ${invoice.shopAddress ? `<p style="margin:4px 0 0;font-size:13px;color:#6b7280;">${escapeHtml(invoice.shopAddress)}</p>` : ''}
+        ${invoice.shopPhone ? `<p style="margin:2px 0 0;font-size:13px;color:#6b7280;">Phone: ${escapeHtml(invoice.shopPhone)}</p>` : ''}
+        <p style="margin:12px 0 0;font-size:18px;font-weight:700;color:#6366f1;letter-spacing:1px;">CASH MEMO</p>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;margin-bottom:20px;font-size:13px;">
+        <div>
+          <p style="margin:0 0 4px;color:#6b7280;font-weight:600;">BILL TO</p>
+          <p style="margin:0;font-weight:700;font-size:15px;">${escapeHtml(invoice.customerName || 'Walk-in Customer')}</p>
+          ${invoice.customerPhone ? `<p style="margin:2px 0 0;color:#6b7280;">${escapeHtml(invoice.customerPhone)}</p>` : ''}
+        </div>
+        <div style="text-align:right;">
+          <p style="margin:0;"><span style="color:#6b7280;">Invoice #</span> <strong>${escapeHtml(invoice.invoiceNumber)}</strong></p>
+          <p style="margin:4px 0 0;"><span style="color:#6b7280;">Date</span> <strong>${escapeHtml(invoice.date)}</strong></p>
+          <p style="margin:4px 0 0;"><span style="color:#6b7280;">Status</span> <strong style="color:${invoice.paymentStatus === 'due' ? '#dc2626' : '#059669'};">${(invoice.paymentStatus || 'paid').toUpperCase()}</strong></p>
+        </div>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;font-size:13px;">
+        <thead>
+          <tr style="background:#f3f4f6;">
+            <th style="padding:10px 12px;text-align:left;border-bottom:2px solid #d1d5db;text-transform:uppercase;font-size:11px;color:#374151;">Item</th>
+            <th style="padding:10px 12px;text-align:center;border-bottom:2px solid #d1d5db;text-transform:uppercase;font-size:11px;color:#374151;">Qty</th>
+            <th style="padding:10px 12px;text-align:right;border-bottom:2px solid #d1d5db;text-transform:uppercase;font-size:11px;color:#374151;">Unit Price</th>
+            <th style="padding:10px 12px;text-align:right;border-bottom:2px solid #d1d5db;text-transform:uppercase;font-size:11px;color:#374151;">Total</th>
+          </tr>
+        </thead>
+        <tbody>${items || `<tr><td colspan="4" style="padding:16px;text-align:center;color:#9ca3af;">No items</td></tr>`}</tbody>
+      </table>
+
+      <div style="display:flex;justify-content:flex-end;margin-top:20px;">
+        <div style="width:280px;">
+          <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:#6b7280;">
+            <span>Subtotal</span><span>${formatMoney(invoice.subtotal)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:13px;color:#6b7280;">
+            <span>Discount</span><span>- ${formatMoney(invoice.discount)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;border-top:2px solid #111827;padding-top:10px;margin-top:6px;font-size:18px;font-weight:800;">
+            <span>Grand Total</span><span style="color:#6366f1;">${formatMoney(invoice.grandTotal)}</span>
+          </div>
+        </div>
+      </div>
+
+      <p style="margin-top:40px;text-align:center;font-size:12px;color:#9ca3af;">Thank you for your purchase!</p>
+    </div>`;
+};
+
 /**
  * Export invoice PDF using html2canvas for perfect Bengali + formatting support.
- * Captures the hidden #invoice-preview div as an image and places it in an A4 PDF.
+ * Builds a self-contained preview, captures it, and places it in an A4 PDF.
+ * No reliance on a #invoice-preview element being present in the DOM.
  */
 export const exportInvoicePDF = async (invoice) => {
-  const element = document.getElementById('invoice-preview');
-  if (!element) {
-    alert('Invoice preview not found. Please try again.');
-    return;
+  if (!invoice || !Array.isArray(invoice.items) || invoice.items.length === 0) {
+    throw new Error('Cannot export an empty invoice. Add at least one item first.');
   }
 
-  // Wait for images to load
-  await new Promise((r) => setTimeout(r, 200));
+  const host = document.createElement('div');
+  host.id = 'invoice-preview';
+  host.style.position = 'fixed';
+  host.style.left = '-10000px';
+  host.style.top = '0';
+  host.style.pointerEvents = 'none';
+  host.innerHTML = buildInvoiceHtml(invoice);
+  document.body.appendChild(host);
 
-  const canvas = await html2canvas(element, {
-    scale: 2,
-    useCORS: true,
-    allowTaint: true,
-    backgroundColor: '#ffffff',
-    width: 794,
-    windowWidth: 794,
-  });
+  try {
+    // Wait for images (logo, etc.) to load
+    await new Promise((r) => setTimeout(r, 200));
 
-  const imgData = canvas.toDataURL('image/png');
-  const pdf = new jsPDF('p', 'mm', 'a4');
-  const pdfWidth = pdf.internal.pageSize.getWidth();
-  const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+    const canvas = await html2canvas(host, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      backgroundColor: '#ffffff',
+      width: 794,
+      windowWidth: 794,
+    });
 
-  // If content is taller than one page, split across pages
-  const pageHeight = pdf.internal.pageSize.getHeight();
-  let heightLeft = pdfHeight;
-  let position = 0;
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const imgHeight = (canvas.height * pdfWidth) / canvas.width;
 
-  pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-  heightLeft -= pageHeight;
+    let position = 0;
+    let heightLeft = imgHeight;
 
-  while (heightLeft > 0) {
-    position -= pageHeight;
-    pdf.addPage();
-    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+    pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
     heightLeft -= pageHeight;
-  }
 
-  pdf.save(`${invoice.invoiceNumber || 'invoice'}.pdf`);
+    while (heightLeft > 0) {
+      position -= pageHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save(`${invoice.invoiceNumber || 'invoice'}.pdf`);
+  } finally {
+    if (host.parentNode) host.parentNode.removeChild(host);
+  }
 };
 
 /**
