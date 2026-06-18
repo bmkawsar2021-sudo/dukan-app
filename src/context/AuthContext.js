@@ -3,11 +3,12 @@ import {
   onAuthStateChanged,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  signInWithPopup,
+  signInWithRedirect,
   signOut,
   sendPasswordResetEmail,
   updateProfile,
   GoogleAuthProvider,
+  getRedirectResult,
 } from 'firebase/auth';
 import { useToast } from './ToastContext';
 import { auth } from '../firebase';
@@ -27,6 +28,22 @@ export function AuthProvider({ children }) {
     // Safety timeout: if onAuthStateChanged never fires, stop showing the spinner.
     const timeout = setTimeout(() => setLoading(false), 3000);
 
+    // Handle the result of a Google sign-in redirect. If the user just came
+    // back from Google's auth page, this returns the credential (or an error).
+    // CRITICAL: must be called on every app load — Firebase doesn't push this
+    // result through onAuthStateChanged.
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result && result.user) {
+          success(`Signed in as ${result.user.displayName || result.user.email} ✅`);
+        }
+      })
+      .catch((err) => {
+        console.error('getRedirectResult error:', err);
+        const msg = friendlyAuthError(err);
+        toastError(msg);
+      });
+
     const unsub = onAuthStateChanged(auth, (user) => {
       clearTimeout(timeout);
       setCurrentUser(user);
@@ -41,7 +58,7 @@ export function AuthProvider({ children }) {
       clearTimeout(timeout);
       unsub();
     };
-  }, []);
+  }, [success, toastError]);
 
   const signup = useCallback(async (email, password, displayName) => {
     try {
@@ -74,17 +91,22 @@ export function AuthProvider({ children }) {
 
   const loginWithGoogle = useCallback(async () => {
     try {
+      // signInWithRedirect (not signInWithPopup) is the correct call on
+      // mobile browsers — popups get silently blocked on Android Chrome.
+      // The page navigates to Google, then back to /, where getRedirectResult
+      // (in the useEffect above) picks up the credential.
       const provider = new GoogleAuthProvider();
-      const cred = await signInWithPopup(auth, provider);
-      success(`Signed in as ${cred.user.displayName || cred.user.email} ✅`);
-      return cred.user;
+      // Set custom parameters to always show account chooser, even if the
+      // user has a default Google account on the device.
+      provider.setCustomParameters({ prompt: 'select_account' });
+      await signInWithRedirect(auth, provider);
     } catch (e) {
       console.error('Google sign-in error:', e);
       const msg = friendlyAuthError(e);
       toastError(msg);
       throw e;
     }
-  }, [success, toastError]);
+  }, [toastError]);
 
   const logout = useCallback(async () => {
     try {

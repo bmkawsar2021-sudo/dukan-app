@@ -286,7 +286,8 @@ const inputStyle = {
   width: '100%', padding: '12px 14px',
   border: '1px solid var(--border)', borderRadius: 12,
   background: 'var(--input-bg)', color: 'var(--text)',
-  fontSize: 14, fontFamily: 'var(--font-body)', outline: 'none',
+  // fontSize MUST be >= 16px on mobile or Chrome will auto-zoom on focus.
+  fontSize: 16, fontFamily: 'var(--font-body)', outline: 'none',
   transition: 'border-color 0.2s, box-shadow 0.2s',
   boxSizing: 'border-box',
 };
