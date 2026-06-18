@@ -98,24 +98,22 @@ import { useNavigate } from 'react-router-dom';
 function AppShell({ dark, toggle }) {
   return (
     <ErrorBoundary>
-      <ToastProvider>
-        <ShopProvider>
-          <Layout dark={dark} toggleDark={toggle}>
-            <BackupBanner />
-            <Routes>
-              <Route path="/" element={<Dashboard />} />
-              <Route path="/cash-memo" element={<CashMemo />} />
-              <Route path="/sales-ledger" element={<SalesLedger />} />
-              <Route path="/expenses" element={<ExpenseTracker />} />
-              <Route path="/stock" element={<StockRegister />} />
-              <Route path="/customers" element={<Customers />} />
-              <Route path="/dues" element={<DueTracker />} />
-              <Route path="/events" element={<EventAccounts />} />
-              <Route path="/settings" element={<Settings />} />
-            </Routes>
-          </Layout>
-        </ShopProvider>
-      </ToastProvider>
+      <ShopProvider>
+        <Layout dark={dark} toggleDark={toggle}>
+          <BackupBanner />
+          <Routes>
+            <Route path="/" element={<Dashboard />} />
+            <Route path="/cash-memo" element={<CashMemo />} />
+            <Route path="/sales-ledger" element={<SalesLedger />} />
+            <Route path="/expenses" element={<ExpenseTracker />} />
+            <Route path="/stock" element={<StockRegister />} />
+            <Route path="/customers" element={<Customers />} />
+            <Route path="/dues" element={<DueTracker />} />
+            <Route path="/events" element={<EventAccounts />} />
+            <Route path="/settings" element={<Settings />} />
+          </Routes>
+        </Layout>
+      </ShopProvider>
     </ErrorBoundary>
   );
 }
@@ -157,10 +155,15 @@ function AuthGate() {
 }
 
 function App() {
+  // ToastProvider must wrap AuthProvider because AuthContext calls useToast().
+  // Do NOT nest another ToastProvider inside (e.g. AppShell) — context value
+  // is "closest provider wins", so a nested one would shadow the outer one.
   return (
-    <AuthProvider>
-      <AuthGate />
-    </AuthProvider>
+    <ToastProvider>
+      <AuthProvider>
+        <AuthGate />
+      </AuthProvider>
+    </ToastProvider>
   );
 }
 

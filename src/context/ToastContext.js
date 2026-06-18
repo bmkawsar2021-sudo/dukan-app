@@ -3,7 +3,11 @@ import React, { createContext, useContext, useState, useCallback } from 'react';
 const ToastContext = createContext();
 
 export function useToast() {
-  return useContext(ToastContext);
+  const ctx = useContext(ToastContext);
+  if (!ctx) {
+    throw new Error('useToast() must be used inside a <ToastProvider>. Check your provider order in App.js.');
+  }
+  return ctx;
 }
 
 export function ToastProvider({ children }) {
