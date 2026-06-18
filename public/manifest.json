@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Dukan",
+  "name": "Dukan - Smart Shop Management",
+  "description": "Smart shop management for daily sales, expenses, stock, customers, dues, and event accounts.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -10,16 +11,21 @@
     {
       "src": "logo192.png",
       "type": "image/png",
-      "sizes": "192x192"
+      "sizes": "192x192",
+      "purpose": "any"
     },
     {
       "src": "logo512.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any"
     }
   ],
-  "start_url": ".",
+  "lang": "en",
+  "scope": "/",
+  "start_url": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "portrait",
+  "theme_color": "#1E1B4B",
+  "background_color": "#FAF7F2"
 }

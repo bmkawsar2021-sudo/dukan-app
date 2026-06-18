@@ -6,6 +6,7 @@ import {
 import { exportInvoicePDF } from '../utils/pdfExport';
 import { useToast } from '../context/ToastContext';
 import { useShop } from '../context/ShopContext';
+import { useAuth } from '../context/AuthContext';
 
 const getInitials = (name) => {
   if (!name) return 'DU';
@@ -17,6 +18,7 @@ const getInitials = (name) => {
 export default function CashMemo() {
   const { success, error: toastError } = useToast();
   const { currentShop } = useShop();
+  const { currentUser } = useAuth();
   const [settings, setSettings] = useState({ shopName: 'Amar Dukan', shopAddress: '', shopPhone: '', shopLogo: null });
   const [invoiceNumber, setInvoiceNumber] = useState('');
   const [date, setDate] = useState(getToday());
@@ -33,14 +35,15 @@ export default function CashMemo() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    getSettings().then(s => {
+    if (!currentUser) return;
+    getSettings(currentUser.uid).then(s => {
       setSettings(s);
       setLogoPreview(s.shopLogo || null);
     });
-    getNextInvoiceNumber().then(setInvoiceNumber);
-    const unsub = subscribeCustomers(setCustomers);
+    getNextInvoiceNumber(currentUser.uid).then(setInvoiceNumber);
+    const unsub = subscribeCustomers(currentUser.uid, setCustomers);
     return () => unsub();
-  }, []);
+  }, [currentUser]);
 
   const shopName = currentShop?.name || settings.shopName || 'Amar Dukan';
   const shopAddress = currentShop?.address || settings.shopAddress || '';
@@ -48,11 +51,11 @@ export default function CashMemo() {
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || !currentUser) return;
     const reader = new FileReader();
     reader.onload = (ev) => {
       setLogoPreview(ev.target.result);
-      saveSettings({ ...settings, shopLogo: ev.target.result });
+      saveSettings(currentUser.uid, { ...settings, shopLogo: ev.target.result });
     };
     reader.readAsDataURL(file);
   };
@@ -71,6 +74,7 @@ export default function CashMemo() {
 
   const handleSave = async () => {
     if (validItems.length === 0) { toastError('Please add at least one item'); return; }
+    if (!currentUser) return;
     setSaving(true);
     try {
       const invoice = {
@@ -78,16 +82,16 @@ export default function CashMemo() {
         items: validItems, subtotal, discount: Number(discount) || 0, grandTotal, paymentStatus,
         shopName, shopAddress, shopPhone,
       };
-      const id = await addInvoice(invoice);
+      const id = await addInvoice(currentUser.uid, invoice);
 
       if (paymentStatus === 'due' && id) {
-        await addDue({
+        await addDue(currentUser.uid, {
           customerName: customerName.trim() || 'Walk-in Customer', customerPhone,
           amount: grandTotal, invoiceId: id, invoiceNumber, date, status: 'due',
         });
       }
 
-      const nextNum = await getNextInvoiceNumber();
+      const nextNum = await getNextInvoiceNumber(currentUser.uid);
       success(`Invoice ${invoiceNumber} saved!`);
       setLastSavedInvoice({ ...invoice, items: validItems });
       setTimeout(() => setLastSavedInvoice(null), 30000);
@@ -124,7 +128,7 @@ export default function CashMemo() {
     setExporting(false);
   };
 
-  const cardStyle = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' };
+  const cardStyle = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, padding: 24, boxShadow: 'var(--shadow-sm)' };
   const inputStyle = { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 12, background: 'var(--input-bg)', color: 'var(--text)', fontSize: 14, fontFamily: 'Inter, sans-serif', outline: 'none', transition: 'border-color 0.2s' };
   const labelStyle = { display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 };
   const btnPrimary = { background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', border: 'none', padding: '10px 20px', borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'Inter, sans-serif', transition: 'all 0.2s' };
@@ -260,9 +264,9 @@ export default function CashMemo() {
           <button onClick={addItem} style={{ ...btnGhost, marginTop: 12, color: '#6366f1', borderColor: '#6366f1' }}>+ Add Item</button>
         </div>
 
-        {/* Totals */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
-          <div style={{ width: 300 }}>
+        {/* Totals — full-width on mobile, fixed 300px on desktop */}
+        <div className="cash-totals" style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 24 }}>
+          <div style={{ width: '100%', maxWidth: 300 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', fontSize: 14 }}>
               <span style={{ color: 'var(--text-secondary)' }}>Subtotal</span>
               <span style={{ fontWeight: 600, color: 'var(--text)' }}>{formatCurrency(subtotal)}</span>
@@ -273,7 +277,7 @@ export default function CashMemo() {
             </div>
             <div style={{ borderTop: '2px solid var(--text)', paddingTop: 12, marginTop: 8, display: 'flex', justifyContent: 'space-between', fontSize: 20, fontWeight: 800 }}>
               <span style={{ color: 'var(--text)' }}>Grand Total</span>
-              <span style={{ color: '#6366f1' }}>{formatCurrency(grandTotal)}</span>
+              <span style={{ color: 'var(--primary)' }}>{formatCurrency(grandTotal)}</span>
             </div>
           </div>
         </div>
@@ -281,7 +285,7 @@ export default function CashMemo() {
         {/* Payment Status */}
         <div style={{ marginBottom: 24, paddingTop: 20, borderTop: '1px solid var(--border)' }}>
           <label style={labelStyle}>Payment Status</label>
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <label style={{
               display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '10px 20px', borderRadius: 12,
               border: `2px solid ${paymentStatus === 'paid' ? '#10b981' : 'var(--border)'}`,

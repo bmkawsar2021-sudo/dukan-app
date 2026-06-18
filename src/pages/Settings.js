@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getSettings, saveSettings } from '../utils/storage';
 import { db } from '../firebase';
-import { collection, getDocs, doc, getDoc, addDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, addDoc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '../context/ToastContext';
 import { useShop } from '../context/ShopContext';
+import { useAuth } from '../context/AuthContext';
 
 const COLLECTIONS = ['invoices', 'expenses', 'products', 'stock_entries', 'events', 'customers', 'dues'];
 
@@ -58,6 +59,7 @@ function ShopModal({ shop, onClose, onSave }) {
 
 export default function Settings() {
   const { success, error } = useToast();
+  const { currentUser, logout } = useAuth();
   const { shops, currentShopId, switchShop, deleteShop, showWelcome } = useShop();
   const [shopName, setShopName] = useState('');
   const [shopAddress, setShopAddress] = useState('');
@@ -70,12 +72,13 @@ export default function Settings() {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    getSettings().then((s) => {
+    if (!currentUser) return;
+    getSettings(currentUser.uid).then((s) => {
       setShopName(s.shopName || '');
       setShopAddress(s.shopAddress || '');
       setShopPhone(s.shopPhone || '');
     });
-  }, []);
+  }, [currentUser]);
 
   // Show welcome modal if no shops
   useEffect(() => {
@@ -83,9 +86,10 @@ export default function Settings() {
   }, [showWelcome]);
 
   const handleSave = async () => {
+    if (!currentUser) return;
     setSaving(true);
     try {
-      await saveSettings({ shopName, shopAddress, shopPhone });
+      await saveSettings(currentUser.uid, { shopName, shopAddress, shopPhone });
       success('সেটিংস সংরক্ষিত হয়েছে ✅');
     } catch (e) {
       console.error('Save settings error:', e);
@@ -95,21 +99,31 @@ export default function Settings() {
   };
 
   const handleExport = async () => {
+    if (!currentUser) return;
     try {
-      const exportData = { exportDate: new Date().toISOString(), version: '1.0', data: {} };
+      const exportData = {
+        exportDate: new Date().toISOString(),
+        version: '2.0',
+        ownerUid: currentUser.uid,
+        ownerEmail: currentUser.email,
+        data: {},
+      };
+      // Per-user scope: only export docs where ownerUid == currentUser.uid
       for (const colName of COLLECTIONS) {
-        const snap = await getDocs(collection(db, colName));
+        const q = query(collection(db, colName), where('ownerUid', '==', currentUser.uid));
+        const snap = await getDocs(q);
         exportData.data[colName] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       }
-      const settingsSnap = await getDoc(doc(db, 'app', 'settings'));
+      // Per-user settings + counter
+      const settingsSnap = await getDoc(doc(db, 'users', currentUser.uid, 'app', 'settings'));
       if (settingsSnap.exists()) exportData.data.settings = settingsSnap.data();
-      const counterSnap = await getDoc(doc(db, 'app', 'counter'));
+      const counterSnap = await getDoc(doc(db, 'users', currentUser.uid, 'app', 'counter'));
       if (counterSnap.exists()) exportData.data.counter = counterSnap.data();
       const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `dukan-backup-${new Date().toISOString().split('T')[0]}.json`;
+      a.download = `dukan-backup-${currentUser.uid.slice(0, 8)}-${new Date().toISOString().split('T')[0]}.json`;
       a.click();
       URL.revokeObjectURL(url);
       const now = new Date().toISOString();
@@ -125,6 +139,7 @@ export default function Settings() {
   const handleImport = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+    if (!currentUser) return;
     if (!window.confirm('এই ব্যাকআপ রিস্টোর করলে ডেটা যোগ হবে। নিশ্চিত?')) {
       e.target.value = '';
       return;
@@ -143,12 +158,14 @@ export default function Settings() {
         if (json.data[colName] && Array.isArray(json.data[colName])) {
           for (const item of json.data[colName]) {
             const { id, ...rest } = item;
-            await addDoc(collection(db, colName), { ...rest, restoredAt: serverTimestamp() });
+            // Stamp the current user as owner so the imported docs are visible
+            // to this user (and only this user).
+            await addDoc(collection(db, colName), { ...rest, ownerUid: currentUser.uid, restoredAt: serverTimestamp() });
           }
         }
       }
       if (json.data.settings) {
-        await setDoc(doc(db, 'app', 'settings'), json.data.settings, { merge: true });
+        await setDoc(doc(db, 'users', currentUser.uid, 'app', 'settings'), json.data.settings, { merge: true });
       }
       success('ব্যাকআপ সফলভাবে রিস্টোর হয়েছে ✅');
     } catch (err) {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { subscribeInvoices, subscribeExpenses, getToday, formatCurrency, formatDate } from '../utils/storage';
+import { useAuth } from '../context/AuthContext';
 import {
   Banknote,
   Receipt,
@@ -21,16 +22,18 @@ const cardSpec = [
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { currentUser } = useAuth();
   const [stats, setStats] = useState({ totalSales: 0, totalExpenses: 0, netProfit: 0 });
   const [recentTransactions, setRecentTransactions] = useState([]);
   const [allInvoices, setAllInvoices] = useState([]);
   const [allExpenses, setAllExpenses] = useState([]);
 
   useEffect(() => {
-    const unsubInvoices = subscribeInvoices(setAllInvoices);
-    const unsubExpenses = subscribeExpenses(setAllExpenses);
+    if (!currentUser) return;
+    const unsubInvoices = subscribeInvoices(currentUser.uid, setAllInvoices);
+    const unsubExpenses = subscribeExpenses(currentUser.uid, setAllExpenses);
     return () => { unsubInvoices(); unsubExpenses(); };
-  }, []);
+  }, [currentUser]);
 
   useEffect(() => {
     const today = getToday();

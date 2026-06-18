@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: must be signed in.
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Helper: doc belongs to the calling user.
+    function isOwner(resource) {
+      return isSignedIn() && resource.data.ownerUid == request.auth.uid;
+    }
+
+    // Helper: incoming write carries the calling user as the owner.
+    function isCreatingAsOwner() {
+      return isSignedIn() && request.resource.data.ownerUid == request.auth.uid;
+    }
+
+    // ─── Per-user private area ─────────────────────────────
+    match /users/{uid} {
+      allow read, write: if isSignedIn() && request.auth.uid == uid;
+
+      match /app/{document=**} {
+        allow read, write: if isSignedIn() && request.auth.uid == uid;
+      }
+    }
+
+    // ─── Global app meta (first-user claim flag, etc.) ─────
+    // Only readable by signed-in users (for the claim flow).
+    // Only writable by the user who is doing the first claim.
+    match /app/meta {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+        && !exists(/databases/$(database)/documents/app/meta)
+        && request.resource.data.firstUserClaimed == true
+        && request.resource.data.firstUserClaimedBy == request.auth.uid;
+      allow update: if isSignedIn()
+        && resource.data.firstUserClaimedBy == request.auth.uid;
+      allow delete: if false;
+    }
+
+    // ─── Per-user data collections ─────────────────────────
+    // Reads/writes are scoped to docs owned by the caller.
+    match /invoices/{id} {
+      allow read, update, delete: if isOwner(resource);
+      allow create: if isCreatingAsOwner();
+    }
+
+    match /expenses/{id} {
+      allow read, update, delete: if isOwner(resource);
+      allow create: if isCreatingAsOwner();
+    }
+
+    match /products/{id} {
+      allow read, update, delete: if isOwner(resource);
+      allow create: if isCreatingAsOwner();
+    }
+
+    match /stock_entries/{id} {
+      allow read, update, delete: if isOwner(resource);
+      allow create: if isCreatingAsOwner();
+    }
+
+    match /events/{id} {
+      allow read, update, delete: if isOwner(resource);
+      allow create: if isCreatingAsOwner();
+    }
+
+    match /customers/{id} {
+      allow read, update, delete: if isOwner(resource);
+      allow create: if isCreatingAsOwner();
+    }
+
+    match /dues/{id} {
+      allow read, update, delete: if isOwner(resource);
+      allow create: if isCreatingAsOwner();
+    }
+
+    match /shops/{id} {
+      allow read, update, delete: if isOwner(resource);
+      allow create: if isCreatingAsOwner();
+    }
+
+    // ─── Deny everything else by default ────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

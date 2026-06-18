@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useShop } from '../context/ShopContext';
+import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard,
   Receipt,
@@ -13,6 +14,7 @@ import {
   Settings,
   Sun,
   Moon,
+  LogOut,
 } from './icons';
 
 const navItems = [
@@ -29,6 +31,7 @@ const navItems = [
 
 export default function Sidebar({ isOpen, onClose, dark, toggleDark }) {
   const { shops, currentShop, switchShop } = useShop();
+  const { currentUser, logout } = useAuth();
   const [showShopDropdown, setShowShopDropdown] = useState(false);
 
   const sidebarBg = dark
@@ -166,8 +169,60 @@ export default function Sidebar({ isOpen, onClose, dark, toggleDark }) {
           ))}
         </nav>
 
-        <div style={{ padding: '16px', borderTop: '1px solid rgba(255,255,255,0.10)', fontSize: 11, opacity: 0.4, textAlign: 'center' }}>
-          Dukan v2.0
+        <div style={{ padding: '12px 14px', borderTop: '1px solid rgba(255,255,255,0.10)' }}>
+          {currentUser && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              padding: '8px 10px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.06)', marginBottom: 8,
+              minWidth: 0,
+            }}>
+              <div style={{
+                width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+                display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                color: 'white', fontWeight: 700, fontSize: 12,
+              }}>
+                {(currentUser.displayName || currentUser.email || '?').charAt(0).toUpperCase()}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: 12, fontWeight: 600, color: 'white',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {currentUser.displayName || currentUser.email}
+                </div>
+                {currentUser.displayName && currentUser.email && (
+                  <div style={{
+                    fontSize: 10, opacity: 0.6, color: 'white',
+                    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                  }}>
+                    {currentUser.email}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          <button
+            onClick={() => { onClose && onClose(); logout(); }}
+            style={{
+              width: '100%', padding: '9px 12px',
+              background: 'rgba(239,68,68,0.12)', color: '#fca5a5',
+              border: '1px solid rgba(239,68,68,0.25)', borderRadius: 10,
+              fontWeight: 600, fontSize: 12, cursor: 'pointer',
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
+              fontFamily: "'Bricolage Grotesque', 'Inter', sans-serif",
+              transition: 'background 0.2s',
+            }}
+            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.20)'}
+            onMouseLeave={e => e.currentTarget.style.background = 'rgba(239,68,68,0.12)'}
+          >
+            <LogOut size={14} />
+            Sign out
+          </button>
+          <div style={{ fontSize: 10, opacity: 0.4, color: 'white', textAlign: 'center', marginTop: 8 }}>
+            Dukan v2.0
+          </div>
         </div>
       </aside>
 

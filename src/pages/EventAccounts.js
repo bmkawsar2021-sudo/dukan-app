@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { subscribeEvents, saveEvent, deleteEvent as deleteEventFB, getToday, formatDate } from '../utils/storage';
+import { useAuth } from '../context/AuthContext';
 
 const fmt = (n) => 'Tk. ' + parseFloat(n || 0).toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
 const formatTaka = fmt;
@@ -15,7 +16,7 @@ const TakaInput = ({ value, onChange, style }) => {
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}
       min="0"
-      style={{ width: 110, padding: '6px 8px', border: '1px solid #475569', borderRadius: 8, fontSize: 13, textAlign: 'right', background: '#1e293b', color: '#f1f5f9', outline: 'none', ...style }}
+      style={{ width: 110, padding: '6px 8px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, textAlign: 'right', background: 'var(--card)', color: 'var(--text)', outline: 'none', ...style }}
     />
   );
 };
@@ -49,12 +50,9 @@ const AVATAR_GRADIENTS = [
 const s = {
   page: { fontFamily: "'Inter', sans-serif" },
   hero: {
-    background: 'linear-gradient(135deg, #6366f1, #7c3aed, #a78bfa, #7c3aed, #6366f1)',
-    backgroundSize: '200% 200%',
-    animation: 'gradientShift 6s ease infinite',
+    /* Use page-hero className — colors come from theme tokens */
     color: 'white', padding: '2rem 2rem', borderRadius: 16, marginBottom: 24,
     position: 'relative', overflow: 'hidden',
-    boxShadow: '0 4px 16px rgba(99,102,241,0.25)',
   },
   heroTitle: { fontSize: 28, fontWeight: 800, marginBottom: 4 },
   heroSub: { opacity: 0.85, fontSize: 14 },
@@ -70,51 +68,51 @@ const s = {
     fontFamily: "'Inter', sans-serif",
   },
   btnGhost: {
-    background: 'transparent', color: '#94a3b8', border: '1px solid #475569',
+    background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)',
     padding: '10px 20px', borderRadius: 12, fontWeight: 600, fontSize: 14, cursor: 'pointer',
     fontFamily: "'Inter', sans-serif",
   },
   card: {
-    background: '#1e293b', border: '1px solid #334155', borderRadius: 16,
-    boxShadow: '0 2px 8px rgba(0,0,0,0.2)', overflow: 'hidden',
+    background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16,
+    boxShadow: 'var(--shadow-sm)', overflow: 'hidden',
   },
   cardHeader: {
-    padding: '14px 18px', borderBottom: '1px solid #334155',
-    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '14px 18px', borderBottom: '1px solid var(--border)',
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8,
   },
   cardBody: { padding: 18 },
   input: {
-    width: '100%', padding: '10px 14px', border: '1px solid #475569', borderRadius: 10,
-    background: '#0f172a', color: '#f1f5f9', fontSize: 14, fontFamily: "'Inter', sans-serif",
+    width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10,
+    background: 'var(--input-bg)', color: 'var(--text)', fontSize: 14, fontFamily: "'Inter', sans-serif",
     outline: 'none', transition: 'border-color 0.2s',
   },
   select: {
-    width: '100%', padding: '10px 14px', border: '1px solid #475569', borderRadius: 10,
-    background: '#0f172a', color: '#f1f5f9', fontSize: 14, fontFamily: "'Inter', sans-serif",
+    width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10,
+    background: 'var(--input-bg)', color: 'var(--text)', fontSize: 14, fontFamily: "'Inter', sans-serif",
     outline: 'none',
   },
-  label: { display: 'block', fontSize: 13, fontWeight: 600, color: '#94a3b8', marginBottom: 6 },
+  label: { display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 },
   table: { width: '100%', borderCollapse: 'collapse' },
   th: {
     textAlign: 'left', padding: '10px 14px', fontSize: 11, fontWeight: 700,
-    textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8',
-    background: '#0f172a', borderBottom: '2px solid #334155',
+    textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)',
+    background: 'transparent', borderBottom: '2px solid var(--border)',
   },
   thRight: {
     textAlign: 'right', padding: '10px 14px', fontSize: 11, fontWeight: 700,
-    textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8',
-    background: '#0f172a', borderBottom: '2px solid #334155',
+    textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)',
+    background: 'transparent', borderBottom: '2px solid var(--border)',
   },
-  td: { padding: '10px 14px', fontSize: 14, borderBottom: '1px solid #1e293b', color: '#e2e8f0' },
-  tdRight: { padding: '10px 14px', fontSize: 14, borderBottom: '1px solid #1e293b', color: '#e2e8f0', textAlign: 'right' },
+  td: { padding: '10px 14px', fontSize: 14, borderBottom: '1px solid var(--border)', color: 'var(--text)' },
+  tdRight: { padding: '10px 14px', fontSize: 14, borderBottom: '1px solid var(--border)', color: 'var(--text)', textAlign: 'right' },
   modal: {
     position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
     background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)',
-    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000,
+    display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16,
   },
   modalContent: {
-    background: '#1e293b', borderRadius: 20, padding: 32, width: '100%', maxWidth: 480,
-    border: '1px solid #334155', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+    background: 'var(--card)', borderRadius: 20, padding: 32, width: '100%', maxWidth: 480,
+    border: '1px solid var(--border)', boxShadow: 'var(--shadow-lg)',
   },
   badge: (type) => ({
     display: 'inline-block', padding: '3px 10px', borderRadius: 9999,
@@ -123,13 +121,13 @@ const s = {
     color: TYPE_COLORS[type]?.text || '#e2e8f0',
   }),
   statBox: (accent) => ({
-    flex: 1, background: '#0f172a', borderRadius: 12, padding: 16, textAlign: 'center',
-    border: `1px solid ${accent}33`,
+    flex: 1, background: 'var(--bg)', borderRadius: 12, padding: 16, textAlign: 'center',
+    border: `1px solid var(--border)`,
   }),
   statLabel: (accent) => ({ fontSize: 11, color: accent, fontWeight: 600, marginBottom: 4 }),
   statValue: (accent) => ({ fontSize: 20, fontWeight: 800, color: accent }),
   sigCanvas: {
-    width: '100%', height: 120, touchAction: 'none', border: '1px solid #475569',
+    width: '100%', height: 120, touchAction: 'none', border: '1px solid var(--border)',
     borderRadius: 8, background: '#fff', cursor: 'crosshair',
   },
 };
@@ -225,12 +223,12 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
         <div style={{ padding: 20 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
             <div>
-              <h3 style={{ fontSize: 22, fontWeight: 800, color: '#f1f5f9', marginBottom: 4 }}>{event.name}</h3>
-              <p style={{ fontSize: 13, color: '#94a3b8' }}>{formatDate(event.date)}</p>
+              <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{event.name}</h3>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{formatDate(event.date)}</p>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <span style={s.badge('friends_event')}>Friends Event</span>
-              <span style={{ fontSize: 13, color: '#94a3b8' }}>Members: <strong style={{ color: '#f1f5f9' }}>{totalMembers}</strong></span>
+              <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Members: <strong style={{ color: 'var(--text)' }}>{totalMembers}</strong></span>
             </div>
           </div>
         </div>
@@ -247,7 +245,7 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
         </div>
         <div style={s.cardBody}>
           {showAddMember && (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: 12, background: '#0f172a', borderRadius: 10 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16, padding: 12, background: 'var(--bg)', borderRadius: 10 }}>
               <input type="text" value={newMember.name} onChange={e => setNewMember({ ...newMember, name: e.target.value })} placeholder="Name" style={{ ...s.input, flex: 1, minWidth: 140 }} />
               <input type="number" value={newMember.contribution} onChange={e => setNewMember({ ...newMember, contribution: e.target.value })} placeholder="Amount" min="0" style={{ ...s.input, width: 120 }} />
               <button onClick={addMember} style={{ ...s.btnPrimary, padding: '8px 16px', fontSize: 13 }}>Add</button>
@@ -267,12 +265,12 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
               </thead>
               <tbody>
                 {members.length === 0 ? (
-                  <tr><td colSpan="5" style={{ ...s.td, textAlign: 'center', padding: 24, color: '#64748b' }}>No members added yet.</td></tr>
+                  <tr><td colSpan="5" style={{ ...s.td, textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>No members added yet.</td></tr>
                 ) : members.map((m, i) => (
-                  <tr key={m.id} style={{ background: i % 2 === 0 ? '#1e293b' : '#172033' }}>
+                  <tr key={m.id} onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.06)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                     <td style={s.td}>{i + 1}</td>
                     <td style={s.td}>
-                      <input type="text" value={m.name} onChange={e => updateMember(m.id, 'name', e.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #475569', borderRadius: 6, fontSize: 13, background: '#0f172a', color: '#f1f5f9', outline: 'none' }} />
+                      <input type="text" value={m.name} onChange={e => updateMember(m.id, 'name', e.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
                     </td>
                     <td style={s.tdRight}>
                       <TakaInput value={m.contribution} onChange={val => updateMember(m.id, 'contribution', val)} />
@@ -291,10 +289,10 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
               </tbody>
             </table>
           </div>
-          <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid #334155', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-            <div style={{ background: '#0f172a', borderRadius: 10, padding: 12, textAlign: 'center' }}>
-              <p style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>Total Members</p>
-              <p style={{ fontSize: 20, fontWeight: 800, color: '#f1f5f9' }}>{totalMembers}</p>
+          <div className="cols-3" style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid var(--border)', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+            <div style={{ background: 'var(--bg)', borderRadius: 10, padding: 12, textAlign: 'center' }}>
+              <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginBottom: 4 }}>Total Members</p>
+              <p style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>{totalMembers}</p>
             </div>
             <div style={{ background: '#1e1b4b', borderRadius: 10, padding: 12, textAlign: 'center' }}>
               <p style={{ fontSize: 11, color: '#a5b4fc', marginBottom: 4 }}>Collected</p>
@@ -319,7 +317,7 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
         </div>
         <div style={s.cardBody}>
           {showAddExpense && (
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr auto', gap: 8, marginBottom: 16, padding: 12, background: '#0f172a', borderRadius: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 16, padding: 12, background: 'var(--bg)', borderRadius: 10 }}>
               <input type="text" value={newExpense.description} onChange={e => setNewExpense({ ...newExpense, description: e.target.value })} placeholder="Description" style={s.input} />
               <select value={newExpense.category} onChange={e => setNewExpense({ ...newExpense, category: e.target.value })} style={s.select}>
                 {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
@@ -350,15 +348,15 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
               </thead>
               <tbody>
                 {expenses.length === 0 ? (
-                  <tr><td colSpan="7" style={{ ...s.td, textAlign: 'center', padding: 24, color: '#64748b' }}>No expenses added yet.</td></tr>
+                  <tr><td colSpan="7" style={{ ...s.td, textAlign: 'center', padding: 24, color: 'var(--text-secondary)' }}>No expenses added yet.</td></tr>
                 ) : expenses.map((e, i) => (
-                  <tr key={e.id} style={{ background: i % 2 === 0 ? '#1e293b' : '#172033' }}>
+                  <tr key={e.id} onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.06)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                     <td style={s.td}>{i + 1}</td>
                     <td style={s.td}>
-                      <input type="text" value={e.description} onChange={ev => updateExpense(e.id, 'description', ev.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid #475569', borderRadius: 6, fontSize: 13, background: '#0f172a', color: '#f1f5f9', outline: 'none' }} />
+                      <input type="text" value={e.description} onChange={ev => updateExpense(e.id, 'description', ev.target.value)} style={{ width: '100%', padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
                     </td>
                     <td style={s.td}>
-                      <select value={e.category} onChange={ev => updateExpense(e.id, 'category', ev.target.value)} style={{ padding: '5px 8px', border: '1px solid #475569', borderRadius: 6, fontSize: 12, background: '#0f172a', color: '#f1f5f9', outline: 'none' }}>
+                      <select value={e.category} onChange={ev => updateExpense(e.id, 'category', ev.target.value)} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12, background: 'var(--bg)', color: 'var(--text)', outline: 'none' }}>
                         {EXPENSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                       </select>
                     </td>
@@ -366,13 +364,13 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
                       <TakaInput value={e.amount} onChange={val => updateExpense(e.id, 'amount', val)} style={{ width: 90 }} />
                     </td>
                     <td style={s.td}>
-                      <select value={e.paidBy || ''} onChange={ev => updateExpense(e.id, 'paidBy', ev.target.value)} style={{ padding: '5px 8px', border: '1px solid #475569', borderRadius: 6, fontSize: 12, background: '#0f172a', color: '#f1f5f9', outline: 'none' }}>
+                      <select value={e.paidBy || ''} onChange={ev => updateExpense(e.id, 'paidBy', ev.target.value)} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12, background: 'var(--bg)', color: 'var(--text)', outline: 'none' }}>
                         <option value="">-</option>
                         {members.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
                       </select>
                     </td>
                     <td style={s.td}>
-                      <input type="date" value={e.date || ''} onChange={ev => updateExpense(e.id, 'date', ev.target.value)} style={{ padding: '5px 8px', border: '1px solid #475569', borderRadius: 6, fontSize: 12, background: '#0f172a', color: '#f1f5f9', outline: 'none' }} />
+                      <input type="date" value={e.date || ''} onChange={ev => updateExpense(e.id, 'date', ev.target.value)} style={{ padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 12, background: 'var(--bg)', color: 'var(--text)', outline: 'none' }} />
                     </td>
                     <td style={s.td}><button onClick={() => deleteExpense(e.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 14, fontWeight: 700 }}>X</button></td>
                   </tr>
@@ -381,10 +379,10 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
             </table>
           </div>
           {Object.keys(categoryTotals).length > 0 && (
-            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #334155', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {Object.entries(categoryTotals).map(([cat, amt]) => (
-                <span key={cat} style={{ padding: '4px 12px', background: '#0f172a', borderRadius: 9999, fontSize: 12, color: '#94a3b8', border: '1px solid #334155' }}>
-                  {cat}: <strong style={{ color: '#f1f5f9' }}>{formatTaka(amt)}</strong>
+                <span key={cat} style={{ padding: '4px 12px', background: 'var(--bg)', borderRadius: 9999, fontSize: 12, color: 'var(--text-secondary)', border: '1px solid var(--border)' }}>
+                  {cat}: <strong style={{ color: 'var(--text)' }}>{formatTaka(amt)}</strong>
                 </span>
               ))}
             </div>
@@ -401,7 +399,7 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
           </div>
         </div>
         <div style={s.cardBody}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          <div className="cols-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
             <div style={s.statBox('#6366f1')}>
               <p style={s.statLabel('#818cf8')}>Total Contribution</p>
               <p style={s.statValue('#a5b4fc')}>{formatTaka(totalContribution)}</p>
@@ -421,13 +419,13 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
       {/* Signatures */}
       <div style={s.card}>
         <div style={s.cardHeader}>
-          <h3 style={{ fontWeight: 700, color: '#f1f5f9', fontSize: 15 }}>Signatures / স্বাক্ষর</h3>
+          <h3 style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15 }}>Signatures / স্বাক্ষর</h3>
         </div>
         <div style={s.cardBody}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 20, justifyContent: 'center' }}>
             {[0, 1, 2].map(idx => (
-              <div key={idx} style={{ flex: '1 1 240px', maxWidth: 300, border: '1px solid #334155', borderRadius: 12, padding: 16, background: '#0f172a' }}>
-                <p style={{ fontSize: 11, fontWeight: 600, color: '#94a3b8', marginBottom: 10, textAlign: 'center' }}>স্বাক্ষর / Signature</p>
+              <div key={idx} style={{ flex: '1 1 240px', maxWidth: 300, border: '1px solid var(--border)', borderRadius: 12, padding: 16, background: 'var(--bg)' }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 10, textAlign: 'center' }}>স্বাক্ষর / Signature</p>
                 <div style={{ position: 'relative' }}>
                   <button
                     onClick={() => {
@@ -439,7 +437,7 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
                         handleSigChange(`sig_${idx}`, null);
                       }
                     }}
-                    style={{ position: 'absolute', top: 4, right: 4, zIndex: 10, padding: '2px 8px', fontSize: 10, color: '#ef4444', background: '#1e293b', borderRadius: 4, border: '1px solid #475569', cursor: 'pointer' }}
+                    style={{ position: 'absolute', top: 4, right: 4, zIndex: 10, padding: '2px 8px', fontSize: 10, color: '#ef4444', background: 'var(--card)', borderRadius: 4, border: '1px solid var(--border)', cursor: 'pointer' }}
                   >
                     মুছুন
                   </button>
@@ -524,7 +522,7 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
                     value={sigNames[`sig_${idx}`] || ''}
                     onChange={e => handleSigNameChange(`sig_${idx}`, e.target.value)}
                     placeholder="নাম লিখুন"
-                    style={{ width: '100%', padding: '6px 8px', fontSize: 13, textAlign: 'center', border: 'none', outline: 'none', background: 'transparent', color: '#f1f5f9' }}
+                    style={{ width: '100%', padding: '6px 8px', fontSize: 13, textAlign: 'center', border: 'none', outline: 'none', background: 'transparent', color: 'var(--text)' }}
                   />
                 </div>
               </div>
@@ -629,7 +627,7 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
           <div style={{ display: 'flex', gap: 20 }}>
             {[0, 1, 2].map(idx => (
               <div key={idx} style={{ flex: 1, border: '1px solid #cbd5e1', borderRadius: 8, padding: 12, textAlign: 'center' }}>
-                <div style={{ fontSize: 10, fontWeight: 600, color: '#64748b', marginBottom: 8 }}>স্বাক্ষর / Signature</div>
+                <div style={{ fontSize: 10, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 8 }}>স্বাক্ষর / Signature</div>
                 {signatures[`sig_${idx}`] && <img src={signatures[`sig_${idx}`]} alt={`Signature ${idx + 1}`} style={{ height: 50, margin: '0 auto 4px', display: 'block' }} />}
                 {!signatures[`sig_${idx}`] && <div style={{ height: 50 }} />}
                 <div style={{ borderTop: '2px solid #000', paddingTop: 6, marginTop: 4 }}>
@@ -640,7 +638,7 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
           </div>
         </div>
         <div style={{ padding: '16px 30px', textAlign: 'center', borderTop: '1px solid #e2e8f0', marginTop: 10 }}>
-          <div style={{ fontSize: 11, color: '#94a3b8' }}>This account is approved by all members</div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>This account is approved by all members</div>
         </div>
       </div>
     </div>
@@ -651,6 +649,7 @@ const FriendsEventTemplate = ({ event, onUpdate }) => {
    MAIN EVENT ACCOUNTS PAGE
    ════════════════════════════════════════════════════════════ */
 const EventAccounts = () => {
+  const { currentUser } = useAuth();
   const [events, setEvents] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -659,14 +658,15 @@ const EventAccounts = () => {
   const [newExpense, setNewExpense] = useState({ description: '', amount: '' });
 
   useEffect(() => {
-    const unsub = subscribeEvents(setEvents);
+    if (!currentUser) return;
+    const unsub = subscribeEvents(currentUser.uid, setEvents);
     return () => unsub();
-  }, []);
+  }, [currentUser]);
 
   const handleCreateEvent = async () => {
-    if (!newEvent.name.trim()) return;
+    if (!newEvent.name.trim() || !currentUser) return;
     const eventData = { name: newEvent.name, date: newEvent.date, type: newEvent.type, income: [], expenses: [], members: [], signatures: {}, sigNames: {} };
-    const newId = await saveEvent(eventData);
+    const newId = await saveEvent(currentUser.uid, eventData);
     if (newId) {
       setNewEvent({ name: '', date: getToday(), type: 'other' });
       setShowCreate(false);
@@ -674,14 +674,16 @@ const EventAccounts = () => {
   };
 
   const handleDeleteEvent = async (id) => {
+    if (!currentUser) return;
     if (window.confirm('Delete this event and all its data?')) {
-      await deleteEventFB(id);
+      await deleteEventFB(currentUser.uid, id);
       if (selectedEvent?.id === id) setSelectedEvent(null);
     }
   };
 
   const handleUpdateEvent = async (updatedEvent) => {
-    await saveEvent(updatedEvent);
+    if (!currentUser) return;
+    await saveEvent(currentUser.uid, updatedEvent);
     setSelectedEvent(updatedEvent);
   };
 
@@ -710,7 +712,7 @@ const EventAccounts = () => {
   return (
     <div style={s.page}>
       {/* Hero Header */}
-      <div style={s.hero}>
+      <div className="page-hero" style={s.hero}>
         <div style={{ position: 'absolute', top: -50, right: -20, width: 300, height: 300, background: 'rgba(255,255,255,0.06)', borderRadius: '50%' }} />
         <h1 style={s.heroTitle}>Event Accounts</h1>
         <p style={s.heroSub}>Manage Event Finances</p>
@@ -725,7 +727,7 @@ const EventAccounts = () => {
       {showCreate && (
         <div style={s.modal} onClick={() => setShowCreate(false)}>
           <div style={s.modalContent} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: 20, fontWeight: 800, color: '#f1f5f9', marginBottom: 24 }}>Create New Event</h3>
+            <h3 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text)', marginBottom: 24 }}>Create New Event</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <div>
                 <label style={s.label}>Event Name</label>
@@ -750,18 +752,18 @@ const EventAccounts = () => {
         </div>
       )}
 
-      {/* Main Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
+      {/* Main Layout — collapses to single column on mobile via .event-grid in theme.css */}
+      <div className="event-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
         {/* Event List (Left) */}
         <div>
           <div style={s.card}>
             <div style={s.cardHeader}>
-              <h3 style={{ fontWeight: 700, color: '#f1f5f9', fontSize: 15 }}>Events</h3>
-              <span style={{ fontSize: 12, color: '#64748b' }}>{events.length} total</span>
+              <h3 style={{ fontWeight: 700, color: 'var(--text)', fontSize: 15 }}>Events</h3>
+              <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{events.length} total</span>
             </div>
             <div style={{ maxHeight: 600, overflowY: 'auto' }}>
               {sortedEvents.length === 0 ? (
-                <div style={{ padding: 40, textAlign: 'center', color: '#64748b', fontSize: 14 }}>No events yet.</div>
+                <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 14 }}>No events yet.</div>
               ) : sortedEvents.map((ev, idx) => {
                 const { profit } = getEventTotal(ev);
                 const isActive = selectedEvent?.id === ev.id;
@@ -774,9 +776,9 @@ const EventAccounts = () => {
                       padding: '14px 18px', cursor: 'pointer', transition: 'all 0.2s',
                       background: isActive ? '#312e81' : 'transparent',
                       borderLeft: isActive ? '4px solid #6366f1' : '4px solid transparent',
-                      borderBottom: '1px solid #1e293b',
+                      borderBottom: '1px solid var(--border)',
                     }}
-                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = '#0f172a'; }}
+                    onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(99,102,241,0.06)'; }}
                     onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
                   >
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -791,7 +793,7 @@ const EventAccounts = () => {
                         <p style={{ fontWeight: 700, color: isActive ? '#e0e7ff' : '#f1f5f9', fontSize: 14, marginBottom: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.name}</p>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                           <span style={s.badge(ev.type)}>{EVENT_LABELS[ev.type]}</span>
-                          <span style={{ fontSize: 11, color: '#64748b' }}>{formatDate(ev.date)}</span>
+                          <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{formatDate(ev.date)}</span>
                         </div>
                       </div>
                       <span style={{ fontSize: 13, fontWeight: 700, color: profit >= 0 ? '#818cf8' : '#f87171', flexShrink: 0 }}>{formatTaka(profit)}</span>
@@ -815,13 +817,13 @@ const EventAccounts = () => {
                   <div style={{ padding: 20 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <div>
-                        <h3 style={{ fontSize: 22, fontWeight: 800, color: '#f1f5f9', marginBottom: 4 }}>{selectedEvent.name}</h3>
-                        <p style={{ fontSize: 13, color: '#94a3b8' }}>{EVENT_LABELS[selectedEvent.type]} &middot; {formatDate(selectedEvent.date)}</p>
+                        <h3 style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)', marginBottom: 4 }}>{selectedEvent.name}</h3>
+                        <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{EVENT_LABELS[selectedEvent.type]} &middot; {formatDate(selectedEvent.date)}</p>
                       </div>
                       <button onClick={() => handleDeleteEvent(selectedEvent.id)} style={s.btnDanger}>Delete</button>
                     </div>
                     {(() => { const { totalIncome, totalExpense, profit } = getEventTotal(selectedEvent); return (
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
+                      <div className="cols-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginTop: 16 }}>
                         <div style={s.statBox('#6366f1')}>
                           <p style={s.statLabel('#818cf8')}>Income</p>
                           <p style={s.statValue('#a5b4fc')}>{formatTaka(totalIncome)}</p>
@@ -845,16 +847,16 @@ const EventAccounts = () => {
                     <h3 style={{ fontWeight: 700, color: '#e0e7ff', fontSize: 15 }}>Income</h3>
                   </div>
                   <div style={s.cardBody}>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                      <input type="text" value={newIncome.description} onChange={e => setNewIncome({ ...newIncome, description: e.target.value })} placeholder="Description" style={{ ...s.input, flex: 1 }} />
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                      <input type="text" value={newIncome.description} onChange={e => setNewIncome({ ...newIncome, description: e.target.value })} placeholder="Description" style={{ ...s.input, flex: 1, minWidth: 140 }} />
                       <input type="number" value={newIncome.amount} onChange={e => setNewIncome({ ...newIncome, amount: e.target.value })} placeholder="Amount" min="0" style={{ ...s.input, width: 130 }} />
                       <button onClick={handleAddIncome} style={{ ...s.btnPrimary, padding: '8px 16px', fontSize: 13 }}>+ Add</button>
                     </div>
                     <div>
                       {selectedEvent.income.length === 0 ? (
-                        <p style={{ textAlign: 'center', padding: 20, color: '#64748b', fontSize: 13 }}>No income entries</p>
+                        <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-secondary)', fontSize: 13 }}>No income entries</p>
                       ) : selectedEvent.income.map((inc, i) => (
-                        <div key={inc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #1e293b' }}>
+                        <div key={inc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                           <span style={{ fontSize: 14, color: '#e2e8f0' }}>{inc.description || '-'}</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <span style={{ fontSize: 14, fontWeight: 700, color: '#818cf8' }}>{formatTaka(inc.amount)}</span>
@@ -872,16 +874,16 @@ const EventAccounts = () => {
                     <h3 style={{ fontWeight: 700, color: '#fecaca', fontSize: 15 }}>Expenses</h3>
                   </div>
                   <div style={s.cardBody}>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-                      <input type="text" value={newExpense.description} onChange={e => setNewExpense({ ...newExpense, description: e.target.value })} placeholder="Description" style={{ ...s.input, flex: 1 }} />
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                      <input type="text" value={newExpense.description} onChange={e => setNewExpense({ ...newExpense, description: e.target.value })} placeholder="Description" style={{ ...s.input, flex: 1, minWidth: 140 }} />
                       <input type="number" value={newExpense.amount} onChange={e => setNewExpense({ ...newExpense, amount: e.target.value })} placeholder="Amount" min="0" style={{ ...s.input, width: 130 }} />
                       <button onClick={handleAddExpense} style={{ ...s.btnPrimary, background: 'linear-gradient(135deg, #ef4444, #dc2626)', padding: '8px 16px', fontSize: 13 }}>+ Add</button>
                     </div>
                     <div>
                       {selectedEvent.expenses.length === 0 ? (
-                        <p style={{ textAlign: 'center', padding: 20, color: '#64748b', fontSize: 13 }}>No expense entries</p>
+                        <p style={{ textAlign: 'center', padding: 20, color: 'var(--text-secondary)', fontSize: 13 }}>No expense entries</p>
                       ) : selectedEvent.expenses.map((exp, i) => (
-                        <div key={exp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #1e293b' }}>
+                        <div key={exp.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid var(--border)' }}>
                           <span style={{ fontSize: 14, color: '#e2e8f0' }}>{exp.description || '-'}</span>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                             <span style={{ fontSize: 14, fontWeight: 700, color: '#f87171' }}>{formatTaka(exp.amount)}</span>
@@ -897,8 +899,8 @@ const EventAccounts = () => {
           ) : (
             <div style={{ ...s.card, padding: '60px 40px', textAlign: 'center' }}>
               <div style={{ fontSize: 48, marginBottom: 16, opacity: 0.3 }}>&#128197;</div>
-              <p style={{ fontSize: 18, fontWeight: 700, color: '#94a3b8', marginBottom: 8 }}>Select an event</p>
-              <p style={{ fontSize: 13, color: '#64748b' }}>Choose an event from the list to view details</p>
+              <p style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-secondary)', marginBottom: 8 }}>Select an event</p>
+              <p style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Choose an event from the list to view details</p>
             </div>
           )}
         </div>

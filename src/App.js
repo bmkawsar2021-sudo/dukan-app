@@ -1,7 +1,8 @@
 import React, { useState, useEffect, Component } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { ToastProvider } from './context/ToastContext';
 import { ShopProvider } from './context/ShopContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import useDarkMode from './hooks/useDarkMode';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
@@ -13,7 +14,9 @@ import Customers from './pages/Customers';
 import DueTracker from './pages/DueTracker';
 import EventAccounts from './pages/EventAccounts';
 import Settings from './pages/Settings';
-import { ShieldAlert, ArrowRight } from './components/icons';
+import AuthScreen from './pages/AuthScreen';
+import FirstLoginSetup from './pages/FirstLoginSetup';
+import { ShieldAlert, ArrowRight, Receipt } from './components/icons';
 import './styles/theme.css';
 
 class ErrorBoundary extends Component {
@@ -89,28 +92,14 @@ function BackupBanner() {
   );
 }
 
-function App() {
-  const { dark, toggle } = useDarkMode();
+// Pulled in below; declared here to avoid an extra import.
+import { useNavigate } from 'react-router-dom';
 
-  // Global crash handler - prevent blank screen
-  useEffect(() => {
-    const handler = (e) => {
-      console.error('Uncaught error:', e.error || e.message);
-      e.preventDefault();
-    };
-    window.addEventListener('error', handler);
-    window.addEventListener('unhandledrejection', handler);
-    return () => {
-      window.removeEventListener('error', handler);
-      window.removeEventListener('unhandledrejection', handler);
-    };
-  }, []);
-
+function AppShell({ dark, toggle }) {
   return (
     <ErrorBoundary>
-    <ToastProvider>
-      <ShopProvider>
-        <Router>
+      <ToastProvider>
+        <ShopProvider>
           <Layout dark={dark} toggleDark={toggle}>
             <BackupBanner />
             <Routes>
@@ -125,10 +114,53 @@ function App() {
               <Route path="/settings" element={<Settings />} />
             </Routes>
           </Layout>
-        </Router>
-      </ShopProvider>
-    </ToastProvider>
+        </ShopProvider>
+      </ToastProvider>
     </ErrorBoundary>
+  );
+}
+
+function AuthGate() {
+  const { currentUser, loading } = useAuth();
+  const { dark, toggle } = useDarkMode();
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+        background: 'var(--bg)', flexDirection: 'column', gap: 12,
+      }}>
+        <div style={{
+          width: 48, height: 48, borderRadius: 16,
+          background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
+          display: 'inline-flex', alignItems: 'center', justifyContent: 'center', color: 'white',
+        }}>
+          <Receipt size={24} />
+        </div>
+        <div className="spinner" style={{ borderTopColor: 'var(--primary)' }} />
+      </div>
+    );
+  }
+
+  if (!currentUser) {
+    return <AuthScreen />;
+  }
+
+  // First-login claim flow: shown above the main app if there's un-owned data.
+  return (
+    <Router>
+      <FirstLoginSetup uid={currentUser.uid} email={currentUser.email}>
+        <AppShell dark={dark} toggle={toggle} />
+      </FirstLoginSetup>
+    </Router>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AuthGate />
+    </AuthProvider>
   );
 }
 

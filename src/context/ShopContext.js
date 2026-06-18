@@ -1,7 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { db } from '../firebase';
-import { collection, doc, setDoc, addDoc, deleteDoc, onSnapshot, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, addDoc, deleteDoc, onSnapshot, serverTimestamp, query, where } from 'firebase/firestore';
 import { useToast } from './ToastContext';
+import { useAuth } from './AuthContext';
 
 const ShopContext = createContext();
 
@@ -10,30 +11,50 @@ export function useShop() {
 }
 
 export function ShopProvider({ children }) {
+  const { currentUser } = useAuth();
   const { success, error } = useToast();
   const [shops, setShops] = useState([]);
-  const [currentShopId, setCurrentShopId] = useState(localStorage.getItem('currentShopId') || '');
+  const [currentShopId, setCurrentShopId] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const uid = currentUser?.uid || null;
+
+  // Initialize selected shop from localStorage (per-uid namespace).
+  useEffect(() => {
+    if (!uid) {
+      setCurrentShopId('');
+      return;
+    }
+    const stored = localStorage.getItem(`currentShopId:${uid}`);
+    setCurrentShopId(stored || '');
+  }, [uid]);
+
+  // Subscribe to this user's shops.
   useEffect(() => {
     let unsub = () => {};
-
-    // Safety timeout: if Firestore doesn't respond in 2s, continue anyway
-    const timeout = setTimeout(() => {
+    setShops([]);
+    if (!uid) {
       setLoading(false);
-    }, 2000);
+      return;
+    }
+
+    // Safety timeout: don't keep showing a spinner if Firestore is slow / blocked.
+    const timeout = setTimeout(() => setLoading(false), 2000);
 
     try {
-      unsub = onSnapshot(collection(db, 'shops'), (snap) => {
+      const q = query(collection(db, 'shops'), where('ownerUid', '==', uid));
+      unsub = onSnapshot(q, (snap) => {
         clearTimeout(timeout);
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         setShops(data);
         setLoading(false);
 
-        // If no current shop selected, pick first one
+        // If we have no current shop, auto-select the first one (or a remembered one).
         if (!currentShopId && data.length > 0) {
-          setCurrentShopId(data[0].id);
-          localStorage.setItem('currentShopId', data[0].id);
+          const remembered = data.find(s => s.id === localStorage.getItem(`currentShopId:${uid}`));
+          const pick = remembered || data[0];
+          setCurrentShopId(pick.id);
+          localStorage.setItem(`currentShopId:${uid}`, pick.id);
         }
       }, (err) => {
         clearTimeout(timeout);
@@ -50,19 +71,24 @@ export function ShopProvider({ children }) {
       clearTimeout(timeout);
       unsub();
     };
-  }, []); // eslint-disable-line
+  }, [uid]); // eslint-disable-line
 
   const currentShop = shops.find(s => s.id === currentShopId) || shops[0] || null;
 
   const switchShop = useCallback((id) => {
     setCurrentShopId(id);
-    localStorage.setItem('currentShopId', id);
-  }, []);
+    if (uid) localStorage.setItem(`currentShopId:${uid}`, id);
+  }, [uid]);
 
   const addShop = useCallback(async (shopData) => {
+    if (!uid) {
+      error('You must be signed in to add a shop');
+      return null;
+    }
     try {
       const ref = await addDoc(collection(db, 'shops'), {
         ...shopData,
+        ownerUid: uid,
         createdAt: serverTimestamp()
       });
       success('শপ তৈরি হয়েছে ✅');
@@ -72,30 +98,31 @@ export function ShopProvider({ children }) {
       error('শপ তৈরি করতে সমস্যা হয়েছে ❌');
       return null;
     }
-  }, [success, error]);
+  }, [uid, success, error]);
 
   const updateShop = useCallback(async (id, data) => {
+    if (!uid) return;
     try {
-      await setDoc(doc(db, 'shops', id), { ...data, updatedAt: serverTimestamp() }, { merge: true });
+      await setDoc(doc(db, 'shops', id), { ...data, ownerUid: uid, updatedAt: serverTimestamp() }, { merge: true });
       success('শপ আপডেট হয়েছে ✅');
     } catch (e) {
       console.error('updateShop error:', e);
       error('আপডেট করতে সমস্যা হয়েছে ❌');
     }
-  }, [success, error]);
+  }, [uid, success, error]);
 
   const deleteShop = useCallback(async (id) => {
+    if (!uid) return;
     try {
       await deleteDoc(doc(db, 'shops', id));
-      // If deleted shop was current, switch to first remaining
       if (id === currentShopId) {
         const remaining = shops.filter(s => s.id !== id);
         if (remaining.length > 0) {
           setCurrentShopId(remaining[0].id);
-          localStorage.setItem('currentShopId', remaining[0].id);
+          localStorage.setItem(`currentShopId:${uid}`, remaining[0].id);
         } else {
           setCurrentShopId('');
-          localStorage.removeItem('currentShopId');
+          localStorage.removeItem(`currentShopId:${uid}`);
         }
       }
       success('শপ মুছে ফেলা হয়েছে ✅');
@@ -103,7 +130,7 @@ export function ShopProvider({ children }) {
       console.error('deleteShop error:', e);
       error('মুছে ফেলতে সমস্যা হয়েছে ❌');
     }
-  }, [currentShopId, shops, success, error]);
+  }, [uid, currentShopId, shops, success, error]);
 
   const value = {
     shops,
@@ -114,7 +141,7 @@ export function ShopProvider({ children }) {
     updateShop,
     deleteShop,
     loading,
-    showWelcome: !loading && shops.length === 0,
+    showWelcome: !!uid && !loading && shops.length === 0,
   };
 
   return (

@@ -586,3 +586,66 @@ tr:nth-child(even):hover td { background: rgba(99, 102, 241, 0.04); }
   .backup-banner { flex-wrap: wrap; }
   .backup-banner-cta { width: 100%; justify-content: center; }
 }
+
+/* ---------- Global responsive utilities ---------- */
+
+/* Page-level wrapper used inside <main> on every page */
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Hero header — shared by all pages. Tighter on mobile. */
+.page-hero {
+  background:
+    radial-gradient(120% 80% at 100% 0%, rgba(251, 146, 60, 0.18) 0%, transparent 60%),
+    linear-gradient(135deg, #1E1B4B 0%, #312E81 45%, #4C1D95 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 14s ease infinite;
+  color: white;
+  padding: 1.75rem 2rem;
+  border-radius: 1rem;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-md);
+}
+.page-hero h1 { font-family: var(--font-display); letter-spacing: -0.025em; }
+.page-hero p  { font-family: var(--font-body); }
+
+/* Generic page card */
+.page-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  box-shadow: var(--shadow-sm);
+  padding: 24px;
+  overflow: hidden;
+}
+
+/* Tables: keep on small screens via horizontal scroll, with rounded scrollbar. */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll table { min-width: 560px; }
+
+/* Stack grids to one column on mobile by default */
+@media (max-width: 720px) {
+  .page-hero { padding: 1.25rem 1.25rem; }
+  .page-hero h1 { font-size: 22px; }
+  .page-card { padding: 16px; border-radius: 14px; }
+
+  /* Generic "two columns" pattern → one column */
+  .cols-2,
+  .cols-3,
+  .cols-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Hide labels that are useful on desktop but redundant on mobile (e.g. "Total:") */
+  .desktop-only { display: none !important; }
+
+  /* EventAccounts: two-col event list/detail → one column on mobile */
+  .event-grid { grid-template-columns: 1fr !important; }
+}

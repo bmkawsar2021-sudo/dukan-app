@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { subscribeCustomers, addCustomer, updateCustomer, deleteCustomer } from '../utils/storage';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 const getInitials = (name) => {
   if (!name) return '?';
@@ -10,7 +11,7 @@ const getInitials = (name) => {
   return name.substring(0, 2).toUpperCase();
 };
 
-const CustomerModal = ({ customer, onClose, onSave }) => {
+const CustomerModal = ({ customer, onClose, onSave, uid }) => {
   const [form, setForm] = useState(customer || { name: '', phone: '', address: '', notes: '' });
   const [saving, setSaving] = useState(false);
   const { success, error } = useToast();
@@ -21,10 +22,10 @@ const CustomerModal = ({ customer, onClose, onSave }) => {
     setSaving(true);
     try {
       if (customer?.id) {
-        await updateCustomer(customer.id, form);
+        await updateCustomer(uid, customer.id, form);
         success('গ্রাহক আপডেট হয়েছে ✅');
       } else {
-        await addCustomer(form);
+        await addCustomer(uid, form);
         success('গ্রাহক সফলভাবে যোগ হয়েছে ✅');
       }
       onSave();
@@ -73,6 +74,7 @@ const CustomerModal = ({ customer, onClose, onSave }) => {
 export default function Customers() {
   const navigate = useNavigate();
   const { success, error } = useToast();
+  const { currentUser } = useAuth();
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -80,12 +82,13 @@ export default function Customers() {
   const [editCustomer, setEditCustomer] = useState(null);
 
   useEffect(() => {
-    const unsub = subscribeCustomers((data) => {
+    if (!currentUser) return;
+    const unsub = subscribeCustomers(currentUser.uid, (data) => {
       setCustomers(data);
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [currentUser]);
 
   const filtered = customers.filter(c => {
     const term = search.toLowerCase();
@@ -93,9 +96,10 @@ export default function Customers() {
   });
 
   const handleDelete = async (id, name) => {
+    if (!currentUser) return;
     if (!window.confirm(`"${name}" গ্রাহক মুছে ফেলবেন?`)) return;
     try {
-      await deleteCustomer(id);
+      await deleteCustomer(currentUser.uid, id);
       success('গ্রাহক মুছে ফেলা হয়েছে ✅');
     } catch (e) {
       console.error('Delete customer error:', e);
@@ -190,9 +194,10 @@ export default function Customers() {
       )}
 
       {/* Modal */}
-      {showModal && (
+      {showModal && currentUser && (
         <CustomerModal
           customer={editCustomer}
+          uid={currentUser.uid}
           onClose={() => { setShowModal(false); setEditCustomer(null); }}
           onSave={() => { setShowModal(false); setEditCustomer(null); }}
         />

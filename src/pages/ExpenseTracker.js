@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { subscribeExpenses, addExpense, deleteExpense, getToday, formatCurrency, formatDate } from '../utils/storage';
+import { useAuth } from '../context/AuthContext';
 
 const CATEGORIES = ['rent', 'salary', 'utilities', 'purchase', 'other'];
 const CATEGORY_LABELS = {
@@ -11,23 +12,24 @@ const CATEGORY_LABELS = {
 };
 
 const st = {
-  card: { background: '#1e293b', border: '1px solid #334155', borderRadius: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.2)', overflow: 'hidden' },
+  card: { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, boxShadow: 'var(--shadow-sm)', overflow: 'hidden' },
   cardBody: { padding: 24 },
-  input: { width: '100%', padding: '10px 14px', border: '1px solid #475569', borderRadius: 10, background: '#0f172a', color: '#f1f5f9', fontSize: 14, fontFamily: "'Inter', sans-serif", outline: 'none' },
-  select: { width: '100%', padding: '10px 14px', border: '1px solid #475569', borderRadius: 10, background: '#0f172a', color: '#f1f5f9', fontSize: 14, fontFamily: "'Inter', sans-serif", outline: 'none' },
-  label: { display: 'block', fontSize: 13, fontWeight: 600, color: '#94a3b8', marginBottom: 6 },
+  input: { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--input-bg)', color: 'var(--text)', fontSize: 14, fontFamily: "'Inter', sans-serif", outline: 'none' },
+  select: { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 10, background: 'var(--input-bg)', color: 'var(--text)', fontSize: 14, fontFamily: "'Inter', sans-serif", outline: 'none' },
+  label: { display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 },
   btnPrimary: { background: 'linear-gradient(135deg, #6366f1, #8b5cf6)', color: 'white', border: 'none', padding: '10px 20px', borderRadius: 12, fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: "'Inter', sans-serif", boxShadow: '0 2px 8px rgba(99,102,241,0.3)' },
-  btnDanger: { background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: 14, fontWeight: 700 },
-  btnGhost: { background: 'transparent', color: '#94a3b8', border: '1px solid #475569', padding: '10px 20px', borderRadius: 12, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: "'Inter', sans-serif" },
-  th: { textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', background: '#0f172a', borderBottom: '2px solid #334155' },
-  thRight: { textAlign: 'right', padding: '12px 16px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#94a3b8', background: '#0f172a', borderBottom: '2px solid #334155' },
-  td: { padding: '12px 16px', fontSize: 14, borderBottom: '1px solid #1e293b', color: '#e2e8f0' },
-  tdRight: { padding: '12px 16px', fontSize: 14, borderBottom: '1px solid #1e293b', color: '#e2e8f0', textAlign: 'right' },
-  headerBar: { padding: '14px 20px', borderBottom: '1px solid #334155' },
-  badge: { display: 'inline-block', padding: '3px 10px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: '#0f172a', color: '#94a3b8', border: '1px solid #334155' },
+  btnDanger: { background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 14, fontWeight: 700 },
+  btnGhost: { background: 'transparent', color: 'var(--text-secondary)', border: '1px solid var(--border)', padding: '10px 20px', borderRadius: 12, fontWeight: 600, fontSize: 14, cursor: 'pointer', fontFamily: "'Inter', sans-serif" },
+  th: { textAlign: 'left', padding: '12px 16px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', background: 'transparent', borderBottom: '2px solid var(--border)' },
+  thRight: { textAlign: 'right', padding: '12px 16px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-secondary)', background: 'transparent', borderBottom: '2px solid var(--border)' },
+  td: { padding: '12px 16px', fontSize: 14, borderBottom: '1px solid var(--border)', color: 'var(--text)' },
+  tdRight: { padding: '12px 16px', fontSize: 14, borderBottom: '1px solid var(--border)', color: 'var(--text)', textAlign: 'right' },
+  headerBar: { padding: '14px 20px', borderBottom: '1px solid var(--border)' },
+  badge: { display: 'inline-block', padding: '3px 10px', borderRadius: 9999, fontSize: 11, fontWeight: 700, background: 'var(--bg)', color: 'var(--text-secondary)', border: '1px solid var(--border)' },
 };
 
 const ExpenseTracker = () => {
+  const { currentUser } = useAuth();
   const [expenses, setExpenses] = useState([]);
   const [date, setDate] = useState(getToday());
   const [category, setCategory] = useState('purchase');
@@ -37,13 +39,14 @@ const ExpenseTracker = () => {
   const [successMsg, setSuccessMsg] = useState('');
 
   useEffect(() => {
-    const unsub = subscribeExpenses(setExpenses);
+    if (!currentUser) return;
+    const unsub = subscribeExpenses(currentUser.uid, setExpenses);
     return () => unsub();
-  }, []);
+  }, [currentUser]);
 
   const handleAdd = async () => {
-    if (!amount || Number(amount) <= 0) return;
-    await addExpense({ date, category, description, amount: Number(amount) });
+    if (!amount || Number(amount) <= 0 || !currentUser) return;
+    await addExpense(currentUser.uid, { date, category, description, amount: Number(amount) });
     setDescription('');
     setAmount('');
     setSuccessMsg('Expense added!');
@@ -51,7 +54,8 @@ const ExpenseTracker = () => {
   };
 
   const handleDelete = async (id) => {
-    await deleteExpense(id);
+    if (!currentUser) return;
+    await deleteExpense(currentUser.uid, id);
   };
 
   const filtered = filterMonth
@@ -77,13 +81,13 @@ const ExpenseTracker = () => {
       </div>
 
       {successMsg && (
-        <div style={{ background: '#312e81', border: '1px solid #6366f1', color: '#a5b4fc', padding: '12px 16px', borderRadius: 12, marginBottom: 16, fontSize: 14, fontWeight: 600 }}>{successMsg}</div>
+        <div style={{ background: 'var(--cream)', border: '1px solid var(--cream-border)', color: 'var(--saffron)', padding: '12px 16px', borderRadius: 12, marginBottom: 16, fontSize: 14, fontWeight: 600 }}>{successMsg}</div>
       )}
 
       {/* Add Expense Form */}
       <div style={{ ...st.card, marginBottom: 24 }}>
         <div style={st.cardBody}>
-          <h3 style={{ fontSize: 17, fontWeight: 700, color: '#f1f5f9', marginBottom: 20 }}>Add New Expense</h3>
+          <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', marginBottom: 20 }}>Add New Expense</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
             <div>
               <label style={st.label}>Date</label>
@@ -106,6 +110,7 @@ const ExpenseTracker = () => {
                 <button onClick={handleAdd} style={st.btnPrimary}>Add</button>
               </div>
             </div>
+            <div className="cols-2" style={{ display: 'none' }} />
           </div>
         </div>
       </div>
@@ -120,8 +125,8 @@ const ExpenseTracker = () => {
             </div>
             <button onClick={() => setFilterMonth('')} style={st.btnGhost}>Show All</button>
             <div style={{ marginLeft: 'auto' }}>
-              <span style={{ fontSize: 13, color: '#94a3b8' }}>Total: </span>
-              <span style={{ fontSize: 20, fontWeight: 800, color: '#f87171' }}>{formatCurrency(totalFiltered)}</span>
+              <span className="desktop-only" style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Total: </span>
+              <span style={{ fontSize: 20, fontWeight: 800, color: 'var(--danger)' }}>{formatCurrency(totalFiltered)}</span>
             </div>
           </div>
         </div>
@@ -129,7 +134,7 @@ const ExpenseTracker = () => {
 
       {/* Expense Table */}
       <div style={{ ...st.card, marginBottom: 24 }}>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
@@ -142,19 +147,19 @@ const ExpenseTracker = () => {
             </thead>
             <tbody>
               {filtered.length === 0 ? (
-                <tr><td colSpan="5" style={{ ...st.td, textAlign: 'center', padding: 32, color: '#64748b' }}>No expenses recorded yet.</td></tr>
+                <tr><td colSpan="5" style={{ ...st.td, textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>No expenses recorded yet.</td></tr>
               ) : (
-                [...filtered].reverse().map((exp, idx) => (
-                  <tr key={exp.id} style={{ background: idx % 2 === 0 ? '#1e293b' : '#172033' }}
-                    onMouseEnter={e => e.currentTarget.style.background = '#0f172a'}
-                    onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? '#1e293b' : '#172033'}
+                [...filtered].reverse().map((exp) => (
+                  <tr key={exp.id}
+                    onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.06)'}
+                    onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                   >
                     <td style={st.td}>{formatDate(exp.date)}</td>
                     <td style={st.td}>
                       <span style={st.badge}>{CATEGORY_LABELS[exp.category] || exp.category}</span>
                     </td>
                     <td style={st.td}>{exp.description || '-'}</td>
-                    <td style={{ ...st.tdRight, fontWeight: 700, color: '#f87171' }}>{formatCurrency(exp.amount)}</td>
+                    <td style={{ ...st.tdRight, fontWeight: 700, color: 'var(--danger)' }}>{formatCurrency(exp.amount)}</td>
                     <td style={st.td}>
                       <button onClick={() => handleDelete(exp.id)} style={st.btnDanger}>X</button>
                     </td>
@@ -169,9 +174,9 @@ const ExpenseTracker = () => {
       {/* Monthly Summary */}
       <div style={st.card}>
         <div style={st.headerBar}>
-          <h3 style={{ fontSize: 17, fontWeight: 700, color: '#f1f5f9' }}>Monthly Summary</h3>
+          <h3 style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>Monthly Summary</h3>
         </div>
-        <div style={{ overflowX: 'auto' }}>
+        <div className="table-scroll">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
@@ -181,18 +186,18 @@ const ExpenseTracker = () => {
               </tr>
             </thead>
             <tbody>
-              {Object.keys(monthlySummary).sort().reverse().map((month, idx) => (
-                <tr key={month} style={{ background: idx % 2 === 0 ? '#1e293b' : '#172033' }}
-                  onMouseEnter={e => e.currentTarget.style.background = '#0f172a'}
-                  onMouseLeave={e => e.currentTarget.style.background = idx % 2 === 0 ? '#1e293b' : '#172033'}
+              {Object.keys(monthlySummary).sort().reverse().map((month) => (
+                <tr key={month}
+                  onMouseEnter={e => e.currentTarget.style.background = 'rgba(99,102,241,0.06)'}
+                  onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                 >
                   <td style={{ ...st.td, fontWeight: 600 }}>{new Date(month + '-01').toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}</td>
                   {CATEGORIES.map((cat) => (
-                    <td key={cat} style={{ ...st.tdRight, color: monthlySummary[month].byCategory[cat] ? '#94a3b8' : '#334155' }}>
+                    <td key={cat} style={{ ...st.tdRight, color: monthlySummary[month].byCategory[cat] ? 'var(--text-secondary)' : 'var(--border)' }}>
                       {monthlySummary[month].byCategory[cat] ? formatCurrency(monthlySummary[month].byCategory[cat]) : '-'}
                     </td>
                   ))}
-                  <td style={{ ...st.tdRight, fontWeight: 700, color: '#f87171' }}>{formatCurrency(monthlySummary[month].total)}</td>
+                  <td style={{ ...st.tdRight, fontWeight: 700, color: 'var(--danger)' }}>{formatCurrency(monthlySummary[month].total)}</td>
                 </tr>
               ))}
             </tbody>

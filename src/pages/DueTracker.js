@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { subscribeDues, markDuePaid, formatCurrency, formatDate } from '../utils/storage';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 
 const getOverdueDays = (dateStr) => {
   if (!dateStr) return 0;
@@ -18,17 +19,19 @@ const TABS = [
 
 export default function DueTracker() {
   const { success, error } = useToast();
+  const { currentUser } = useAuth();
   const [dues, setDues] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('all');
 
   useEffect(() => {
-    const unsub = subscribeDues((data) => {
+    if (!currentUser) return;
+    const unsub = subscribeDues(currentUser.uid, (data) => {
       setDues(data);
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [currentUser]);
 
   const activeDues = dues.filter(d => d.status === 'due');
   const totalDue = activeDues.reduce((sum, d) => sum + (d.amount || 0), 0);
@@ -43,7 +46,7 @@ export default function DueTracker() {
   const handleMarkPaid = async (due) => {
     if (!window.confirm(`"${due.customerName}" এর বাকি পরিশোধ হিসেবে চিহ্নিত করবেন?`)) return;
     try {
-      await markDuePaid(due.id);
+      await markDuePaid(currentUser.uid, due.id);
       success('বাকি পরিশোধ হিসেবে চিহ্নিত হয়েছে ✅');
     } catch (e) {
       console.error('Mark paid error:', e);
@@ -53,8 +56,8 @@ export default function DueTracker() {
 
   return (
     <div>
-      <div style={{ background: 'linear-gradient(135deg, #ef4444, #f97316, #f59e0b)', color: 'white', padding: '2rem', borderRadius: '1rem', marginBottom: '1.5rem' }}>
-        <h1 style={{ fontSize: 28, fontWeight: 800, marginBottom: 4 }}>বাকি হিসাব / Due Tracker</h1>
+      <div className="page-hero" style={{ padding: '1.75rem 2rem' }}>
+        <h1 style={{ fontSize: 28, fontWeight: 700, marginBottom: 4 }}>বাকি হিসাব / Due Tracker</h1>
         <p style={{ opacity: 0.85, fontSize: 14 }}>Track pending payments and dues</p>
       </div>
 
@@ -75,7 +78,7 @@ export default function DueTracker() {
       </div>
 
       {/* Filter tabs */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
         {TABS.map(t => (
           <button
             key={t.key}
