@@ -16,6 +16,7 @@ import EventAccounts from './pages/EventAccounts';
 import Settings from './pages/Settings';
 import AuthScreen from './pages/AuthScreen';
 import FirstLoginSetup from './pages/FirstLoginSetup';
+import InstallButton from './components/InstallButton';
 import { ShieldAlert, ArrowRight, Receipt } from './components/icons';
 import './styles/theme.css';
 
@@ -100,6 +101,7 @@ function AppShell({ dark, toggle }) {
     <ErrorBoundary>
       <ShopProvider>
         <Layout dark={dark} toggleDark={toggle}>
+          <InstallButton />
           <BackupBanner />
           <Routes>
             <Route path="/" element={<Dashboard />} />

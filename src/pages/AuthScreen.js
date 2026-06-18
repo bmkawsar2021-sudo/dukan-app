@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { Receipt, Sun, Moon } from '../components/icons';
 import useDarkMode from '../hooks/useDarkMode';
+import InstallButton from '../components/InstallButton';
 
 export default function AuthScreen() {
   const { signup, login, loginWithGoogle, resetPassword } = useAuth();
@@ -69,19 +70,25 @@ export default function AuthScreen() {
           color: 'var(--text)', width: 40, height: 40, borderRadius: 10,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
           cursor: 'pointer',
+          zIndex: 10,
         }}
       >
         <DarkIcon size={18} />
       </button>
 
       <div style={{
-        background: 'var(--card)',
-        border: '1px solid var(--border)',
-        borderRadius: 20,
-        boxShadow: 'var(--shadow-lg)',
         width: '100%', maxWidth: 440,
-        padding: 32,
+        display: 'flex', flexDirection: 'column',
       }}>
+        <InstallButton />
+
+        <div style={{
+          background: 'var(--card)',
+          border: '1px solid var(--border)',
+          borderRadius: 20,
+          boxShadow: 'var(--shadow-lg)',
+          padding: 32,
+        }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div style={{
@@ -273,6 +280,7 @@ export default function AuthScreen() {
             </p>
           </>
         )}
+        </div>
       </div>
     </div>
   );
